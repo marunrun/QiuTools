@@ -3,11 +3,10 @@ import { Loading } from '@alifd/next';
 import { buildComponents, AssetLoader } from '@alilc/lowcode-utils';
 import ReactRenderer from '@alilc/lowcode-react-renderer';
 import { injectComponents } from '@alilc/lowcode-plugin-inject';
-import { useParams } from 'ice';
-import { getLSName } from '../Design/plugins/utils';
+import { getLSName, getPageId } from '../Design/plugins/utils';
 
 export default () => {
-  const { pageId }: any = useParams();
+  const pageId = getPageId();
   const [data, setData] = useState<any>({});
 
   async function init() {
@@ -48,6 +47,7 @@ export default () => {
 
   if (!schema || !components) {
     init();
+    // @ts-ignore
     return <Loading fullScreen />;
   }
 

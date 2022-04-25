@@ -1,7 +1,8 @@
-import useHistory from '@/hooks/useHistory';
+/* eslint-disable @iceworks/best-practices/no-http-url */
 import ProTable, { ProColumns, TableDropdown } from '@ant-design/pro-table';
-import { Button, Card, Form, Modal } from 'antd';
-import CreatePage from './widgets/CreatePage';
+import { Button, Card, Form, message, Modal, Popconfirm } from 'antd';
+import { request, history } from 'ice';
+// import { CreatePage} from 'widgets';
 
 interface GithubIssueItem {
   id: number;
@@ -15,6 +16,8 @@ interface GithubIssueItem {
   state: number;
 }
 
+const REST_API = 'http://localhost:8112/@robber/devPage';
+
 const columns: Array<ProColumns<GithubIssueItem>> = [
   {
     title: 'ID',
@@ -22,20 +25,46 @@ const columns: Array<ProColumns<GithubIssueItem>> = [
     copyable: true,
     align: 'center',
     search: false,
+    hideInForm: true,
   },
   {
     title: '页面名称',
-    dataIndex: 'pageName',
+    dataIndex: 'name',
     align: 'center',
     copyable: true,
+    search: false,
+  },
+  {
+    title: '页面名称',
+    dataIndex: 'name:fuzzy',
+    align: 'center',
+    hideInForm: true,
+    hideInTable: true,
+  },
+  {
+    title: '路由',
+    dataIndex: 'path',
+    align: 'center',
+    copyable: true,
+    search: false,
+  },
+  {
+    title: '路由',
+    dataIndex: 'path:fuzzy',
+    align: 'center',
+    hideInForm: true,
+    hideInTable: true,
   },
   {
     title: '状态',
-    dataIndex: 'state',
+    dataIndex: 'status',
     align: 'center',
     valueType: 'select',
     valueEnum: {
-      0: { text: '全部', status: 'Default' },
+      0: {
+        text: '全部',
+        status: 'Default',
+      },
       1: {
         text: '已发布',
         status: 'Error',
@@ -47,23 +76,16 @@ const columns: Array<ProColumns<GithubIssueItem>> = [
     },
   },
   {
-    title: '最近修改',
-    dataIndex: 'updater',
+    title: '更新时间',
+    dataIndex: 'createdTime',
     align: 'center',
+    search: false,
   },
   {
     title: '更新时间',
-    dataIndex: 'updateTime',
-    valueType: 'dateRange',
+    dataIndex: 'updatedTime',
     align: 'center',
-    search: {
-      transform: (value) => {
-        return {
-          startTime: value[0],
-          endTime: value[1],
-        };
-      },
-    },
+    search: false,
   },
   {
     title: '操作',
@@ -74,7 +96,7 @@ const columns: Array<ProColumns<GithubIssueItem>> = [
       <a
         key="editable"
         onClick={() => {
-          action?.startEditable?.(record.id);
+          action?.startEditable(record.id)
         }}
       >
         编辑
@@ -84,10 +106,35 @@ const columns: Array<ProColumns<GithubIssueItem>> = [
       </a>,
       <TableDropdown
         key="actionGroup"
-        onSelect={() => action?.reload()}
+        // onSelect={() => action?.reload()}
         menus={[
-          { key: 'copy', name: '复制' },
-          { key: 'delete', name: '删除' },
+          {
+            key: 'copy',
+            name: '复制',
+
+          },
+          {
+            key: 'delete',
+            name: (
+              <Popconfirm
+                title="确认删除？"
+                onConfirm={async () => {
+                  const result = await request.delete(`${REST_API}/${record.id}`);
+                  if (result.f === 1) {
+                    message.success('删除成功');
+                    action?.reload();
+                  } else {
+                    message.error(`删除失败: [${result.m}]`);
+                  }
+                }
+                }
+                okText="是的"
+                cancelText="不用了"
+              >
+                <a href="#">删除</a>
+              </Popconfirm>
+            ),
+          },
         ]}
       />,
     ],
@@ -96,37 +143,41 @@ const columns: Array<ProColumns<GithubIssueItem>> = [
 
 export default () => {
   const [form] = Form.useForm();
-  const history = useHistory();
+  // const history = useHistory();
 
-  const onCreatePage = () => {
-    Modal.confirm({
-      content: <CreatePage form={form} />,
-      onOk: async () => {
-        const res = await form.validateFields();
-        console.log(res);
-        history.push('/app/lowcode/design/123');
-      },
-      width: 500,
-      title: '创建页面',
-    });
-  };
 
   const goCreate = () => {
-    history.push('/app/lowcode/design');
+    history?.push('/app/lowcode/design/');
   };
 
   return (
     <Card>
       <ProTable
-        headerTitle="页面列表"
+        headerTitle="页面配置"
         columns={columns}
+        rowKey="id"
+        request={async (params, sort, filter) => {
+          const data = await request.get(REST_API, {
+            params: {
+              ...params,
+              page: params.current,
+              rows: params.pageSize,
+            },
+          });
+
+          return {
+            data: data.d.result,
+            success: data.f === 1,
+            total: data.d.pagination.count,
+          };
+        }}
         toolBarRender={() => [
           <Button type="primary" ghost onClick={goCreate}>
-            试玩一下
-          </Button>,
-          <Button type="primary" onClick={onCreatePage}>
             新建页面
           </Button>,
+          // <Button type="primary" onClick={onCreatePage}>
+          //   新建页面
+          // </Button>,
         ]}
       />
     </Card>
