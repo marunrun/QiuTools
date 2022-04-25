@@ -1,7 +1,9 @@
 import { Logo } from '@/components/Icon';
 import { ILowCodePluginContext } from '@alilc/lowcode-engine';
 import { Button, message } from 'antd';
-import { onPreview, resetSchema, saveSchema } from './utils';
+import { getPageId, newSchema, PageProps, onPreview, resetSchema, saveSchema } from './utils';
+import CreatePage from '../../widgets/CreatePage';
+import { LOCAL_PAGE_ID } from '../../components/type';
 
 // 注册保存面板
 const HeaderPlugin = (ctx: ILowCodePluginContext) => {
@@ -40,37 +42,42 @@ const HeaderPlugin = (ctx: ILowCodePluginContext) => {
           </Button>
         ),
       });
-      // skeleton.add({
-      //   name: 'saveToLocal',
-      //   area: 'topArea',
-      //   type: 'Widget',
-      //   props: {
-      //     align: 'right',
-      //   },
-      //   content: (
-      //     <Button className="font-size-12" onClick={saveSchemaToLocal}>
-      //       保存到本地
-      //     </Button>
-      //   ),
-      // });
-      skeleton.add({
-        name: 'save',
-        area: 'topArea',
-        type: 'Widget',
-        props: {
-          align: 'right',
-        },
-        content: (
-          <Button
-            className="font-size-12"
-            type="primary"
-            ghost
-            onClick={saveSchema}
-          >
-            保存
-          </Button>
-        ),
-      });
+
+
+      if (getPageId() === LOCAL_PAGE_ID) {
+        skeleton.add({
+          name: 'save',
+          area: 'topArea',
+          type: 'Widget',
+          props: {
+            align: 'right',
+          },
+          content: (
+            <CreatePage
+              onSubmit={async (values) => {
+                newSchema(values as PageProps);
+                return true;
+              }}
+            />
+          ),
+        });
+      } else {
+        skeleton.add({
+          name: 'preview',
+          area: 'topArea',
+          type: 'Widget',
+          props: {
+            align: 'right',
+          },
+          content: (
+            <Button className="font-size-12" type="primary" onClick={saveSchema}>
+              保存
+            </Button>
+          ),
+        });
+      }
+
+
       skeleton.add({
         name: 'preview',
         area: 'topArea',

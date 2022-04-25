@@ -3,31 +3,89 @@ import { material, project } from '@alilc/lowcode-engine';
 import { message, Modal } from 'antd';
 import { TransformStage } from '@alilc/lowcode-types';
 import { filterPackages } from '@alilc/lowcode-plugin-inject';
-import { config, request } from 'ice';
+import { config, request, history, useParams } from 'ice';
+import { LOCAL_PAGE_ID, SCHEMA_API, REST_API } from '../../components/type';
+import { v4 as uuid } from 'uuid';
 
-
-const SCHEMA_API = config.SCHEMA_API ?? 'http://localhost:8112/backend/low-code/schema';
 
 /**
  * 预览页面
  */
 export const onPreview = () => {
   const pageId = getPageId();
-  saveSchema();
+  saveToLocal();
   window.open(`${location.origin}/app/lowcode/preview/${pageId}`);
+};
+
+const saveToLocal = async function () {
+  const schema = project.exportSchema(TransformStage.Save);
+  const packages = await filterPackages(material.getAssets().packages);
+
+  // 本地保存到localStorage
+
+  localStorage.setItem(getLSName(LOCAL_PAGE_ID), JSON.stringify(schema));
+  localStorage.setItem(getLSName(LOCAL_PAGE_ID, 'packages'), JSON.stringify(packages));
 };
 
 /**
  * 保存schema
  */
 export const saveSchema = async () => {
-  const pageId = getPageId();
-  // 写入Schema和Package依赖
-  localStorage.setItem(getLSName(pageId), JSON.stringify(project.exportSchema(TransformStage.Save)));
-  const packages = await filterPackages(material.getAssets().packages);
-  localStorage.setItem(getLSName(pageId, 'packages'), JSON.stringify(packages));
-  message.success('成功保存到本地');
+  const id = getPageId();
+  const schema = {
+    schema: getSchema(),
+    packages: getPackages(),
+  };
+
+  const res = await request.put(`${REST_API}/${id}`, {
+    schemaJson: JSON.stringify(schema),
+  });
+
+  if (res.f === 1) {
+    message.success('保存成功');
+    window.location.reload();
+  } else {
+    message.error('保存失败');
+  }
 };
+
+export const getSchema = () => {
+  return project.exportSchema(TransformStage.Save);
+};
+export const getPackages = async () => {
+  return await filterPackages(material.getAssets().packages);
+};
+
+
+export interface PageProps {
+  name: string;
+  path: string;
+}
+
+export const newSchema = async (props: PageProps) => {
+  const id = uuid().replaceAll('-', '');
+
+  console.log(id);
+  const schema = {
+    schema: getSchema(),
+    packages: getPackages(),
+  };
+
+  const res = await request.post(REST_API, {
+    id,
+    ...props,
+    schemaJson: JSON.stringify(schema),
+  });
+
+  if (res.f === 1) {
+    message.success('保存成功');
+    history?.push(`/app/lowcode/design/${id}`);
+    window.location.reload();
+  } else {
+    message.error('保存失败');
+  }
+};
+
 
 export const resetSchema = async () => {
   await new Promise<boolean>((resolve, reject) => {
@@ -58,26 +116,27 @@ export const getPageSchema = async () => {
   const pageId = getPageId();
 
   // 从localstorage获取本地缓存的
-  const schema = JSON.parse(localStorage.getItem(getLSName(pageId)) || '{}');
-  const pageSchema = schema?.componentsTree?.[0] ?? {};
-  if (Object.keys(pageSchema).length !== 0) {
-    return pageSchema;
-  }
+  let schema = JSON.parse(localStorage.getItem(getLSName(pageId)) || '{}');
 
-  // 从接口获取
-  const res = (await request.get(SCHEMA_API, {
-    params: {
+
+  if (Object.keys(schema).length === 0) {
+    // 从接口获取
+    const res = (await request.get(SCHEMA_API, {
+      params: {
       // pageId默认null
-      pageId: pageId === 'local' ? null : pageId,
-    },
-  }));
+        pageId: pageId === LOCAL_PAGE_ID ? null : pageId,
+      },
+    }));
 
-  if (res.f !== 1) {
-    message.error('获取schema失败');
-    return;
+    if (res.f !== 1) {
+      message.error('获取schema失败');
+      return;
+    }
+    schema = JSON.parse(res.d).schema;
   }
+  console.log(schema);
 
-  return JSON.parse(res.d);
+  return schema?.componentsTree?.[0] ?? {};
 };
 
 /** 获取LocalStrong键名 */
@@ -88,5 +147,5 @@ export const getLSName = (pageId, ns = 'projectSchema') => `${ns}-${pageId}`;
  */
 export const getPageId = () => {
   const { pageId } = window as any;
-  return pageId ?? 'local';
+  return pageId ?? LOCAL_PAGE_ID;
 };

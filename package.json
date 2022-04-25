@@ -36,7 +36,8 @@
     "rehype-autolink-headings": "^6.1.1",
     "rehype-slug": "^5.0.1",
     "remark-gfm": "^3.0.1",
-    "shortid": "^2.2.16"
+    "shortid": "^2.2.16",
+    "uuid": "^8.3.2"
   },
   "devDependencies": {
     "@alilc/lowcode-engine": "^1.0.5",

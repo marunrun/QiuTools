@@ -3,20 +3,16 @@ import ProTable, { ProColumns, TableDropdown } from '@ant-design/pro-table';
 import { Button, Card, Form, message, Modal, Popconfirm } from 'antd';
 import { request, history } from 'ice';
 // import { CreatePage} from 'widgets';
+import { REST_API } from './components/type';
 
 interface GithubIssueItem {
   id: number;
-  url: string;
-  pageName: string;
-  description: string;
-  createTime: string;
-  creator: string;
-  updateTime: string;
-  updater: string;
-  state: number;
+  name: string;
+  path: string;
+  createdTime: string;
+  updatedTime: string;
 }
 
-const REST_API = 'http://localhost:8112/@robber/devPage';
 
 const columns: Array<ProColumns<GithubIssueItem>> = [
   {
@@ -101,7 +97,7 @@ const columns: Array<ProColumns<GithubIssueItem>> = [
       >
         编辑
       </a>,
-      <a href={record.url} target="_blank" rel="noopener noreferrer" key="view">
+      <a href={`/app/lowcode/design/${record.id}`} target="_blank" rel="noopener noreferrer" key="view">
         查看
       </a>,
       <TableDropdown
