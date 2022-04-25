@@ -3,6 +3,7 @@ import { material, project } from '@alilc/lowcode-engine';
 import { message, Modal } from 'antd';
 import { TransformStage } from '@alilc/lowcode-types';
 import { filterPackages } from '@alilc/lowcode-plugin-inject';
+import { object } from "prop-types";
 
 export const onPreview = () => {
   const { pageId } = window as any;
@@ -61,7 +62,7 @@ export const getPageSchema = async () => {
   const { pageId } = window as any;
   const schema = JSON.parse(localStorage.getItem(getLSName(pageId)) || '{}');
   const pageSchema = schema?.componentsTree?.[0];
-  if (pageSchema) {
+  if (Object.keys(pageSchema).length !== 0) {
     return pageSchema;
   }
   return (await fetch('/template.json')).json();
